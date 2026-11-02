@@ -1,0 +1,2970 @@
+openapi: 3.0.3
+info:
+  title: AI Закупщик — контракт REST API
+  version: 1.0.0-draft
+  description: Предлагаемый контракт MVP по ИС2 (1).pdf. Допущения и обязательные межполевые бизнес-правила см.
+    API.md. Это спецификация, не реализация сервера.
+servers:
+- url: http://localhost:8080/api/v1
+  description: Локальная разработка; production — HTTPS на домене проекта
+security:
+- bearerAuth: []
+tags:
+- name: Auth
+- name: Company
+- name: Products
+- name: Inventory
+- name: Sales
+- name: Suppliers
+- name: Analytics
+- name: Purchases
+- name: Imports
+paths:
+  /auth/register:
+    post:
+      summary: Регистрация и создание организации
+      description: Атомарно создаёт компанию и пользователя. Email уникален глобально без учёта регистра. Вход в
+        существующую организацию по companyId запрещён. Location указывает /api/v1/auth/me.
+      operationId: post_auth_register
+      tags:
+      - Auth
+      responses:
+        '201':
+          description: Создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResult'
+          headers:
+            Location:
+              description: Относительный URI созданного ресурса /api/v1/...
+              schema:
+                type: string
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '422':
+          $ref: '#/components/responses/Error422'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+  /auth/login:
+    post:
+      summary: Вход
+      description: Неверные email и пароль дают одинаковый 401 INVALID_CREDENTIALS. Новый sid на каждую сессию.
+      operationId: post_auth_login
+      tags:
+      - Auth
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResult'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '422':
+          $ref: '#/components/responses/Error422'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+  /auth/logout:
+    post:
+      summary: Выход из текущей сессии
+      description: Отзывает sid текущего JWT до exp. Другие сессии не затрагиваются; повтор с уже отозванным JWT
+        даёт 401.
+      operationId: post_auth_logout
+      tags:
+      - Auth
+      responses:
+        '204':
+          description: Успешно, тело отсутствует
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+  /auth/me:
+    get:
+      summary: Текущий пользователь и компания
+      description: Текущий пользователь и компания
+      operationId: get_auth_me
+      tags:
+      - Auth
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+  /companies/current:
+    get:
+      summary: Текущая организация
+      description: Текущая организация
+      operationId: get_companies_current
+      tags:
+      - Company
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+  /products:
+    get:
+      summary: Список и поиск товаров
+      description: Список и поиск товаров
+      operationId: get_products
+      tags:
+      - Products
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPage'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - name,asc
+          - name,desc
+          - sku,asc
+          - createdAt,desc
+          default: name,asc
+        description: Одно значение field,direction. Вторичная сортировка id ASC.
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description: Подстрока sku или name, регистр не учитывается.
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description: Точное совпадение категории.
+    post:
+      summary: Создать товар
+      description: SKU уникален внутри компании и регистрозависим. Создаёт inventory с quantity=0, version=1. category
+        и preferredSupplierId по умолчанию null; preferredSupplierId при создании должен быть null, поскольку предложение
+        ещё не существует.
+      operationId: post_products
+      tags:
+      - Products
+      responses:
+        '201':
+          description: Создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+          headers:
+            Location:
+              description: Относительный URI созданного ресурса /api/v1/...
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreate'
+  /products/{productId}:
+    get:
+      summary: Карточка товара
+      description: Карточка товара
+      operationId: get_products_productId
+      tags:
+      - Products
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema: &id001
+          type: string
+          pattern: ^[1-9][0-9]{0,18}$
+          description: Положительный BIGINT как строка; не более 9223372036854775807.
+          example: '101'
+    patch:
+      summary: Изменить товар
+      description: Только переданные поля; null разрешён только category и preferredSupplierId. Выбранный поставщик
+        должен иметь предложение для товара. version обязателен.
+      operationId: patch_products_productId
+      tags:
+      - Products
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductPatch'
+    delete:
+      summary: Удалить товар без истории
+      description: 409 RESOURCE_IN_USE при ненулевом остатке, продажах или любой закупке. При успехе удаляются inventory
+        и предложения; расчёты помечаются устаревшими. Старые снимки сохраняются, но непригодны для новой закупки.
+      operationId: delete_products_productId
+      tags:
+      - Products
+      responses:
+        '204':
+          description: Успешно, тело отсутствует
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema: *id001
+      - name: version
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+  /inventory:
+    get:
+      summary: Список остатков
+      description: Сортировка productId ASC. Ровно одна запись на товар; один склад компании.
+      operationId: get_inventory
+      tags:
+      - Inventory
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryPage'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: productId
+        in: query
+        required: false
+        schema: *id001
+  /products/{productId}/inventory:
+    get:
+      summary: Остаток товара
+      description: Остаток товара
+      operationId: get_products_productId_inventory
+      tags:
+      - Inventory
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inventory'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema: *id001
+    put:
+      summary: Установить абсолютный остаток
+      description: quantity заменяет остаток, не прибавляет его. Проверка version атомарна с записью. Изменение
+        делает расчёты устаревшими.
+      operationId: put_products_productId_inventory
+      tags:
+      - Inventory
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inventory'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventorySet'
+  /sales:
+    get:
+      summary: Продажи за период
+      description: Даты включительно, dateFrom<=dateTo<=сегодня UTC; максимум 366 дней. Сортировка saleDate DESC,
+        id ASC.
+      operationId: get_sales
+      tags:
+      - Sales
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalePage'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: productId
+        in: query
+        required: false
+        schema: *id001
+      - name: dateFrom
+        in: query
+        required: true
+        schema: &id002
+          type: string
+          format: date
+          example: '2026-10-25'
+      - name: dateTo
+        in: query
+        required: true
+        schema: *id002
+  /products/{productId}/sales/{saleDate}:
+    put:
+      summary: Записать продажи товара за день
+      description: 'Upsert абсолютного дневного количества. Новая строка: version=0; существующая: её текущая version.
+        Всегда 200. Не изменяет складской остаток. quantity=0 допускается; saleDate не позже сегодня UTC.'
+      operationId: put_products_productId_sales_saleDate
+      tags:
+      - Sales
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sale'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: saleDate
+        in: path
+        required: true
+        schema: *id002
+      - name: productId
+        in: path
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaleSet'
+  /sales/summary:
+    get:
+      summary: Сумма продаж за период
+      description: 'Те же границы, что у GET /sales. productCount — количество разных товаров с quantity>0 за период,
+        totalQuantity — сумма quantity. Пустой период: оба счётчика 0.'
+      operationId: get_sales_summary
+      tags:
+      - Sales
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesSummary'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: productId
+        in: query
+        required: false
+        schema: *id001
+      - name: dateFrom
+        in: query
+        required: true
+        schema: *id002
+      - name: dateTo
+        in: query
+        required: true
+        schema: *id002
+  /suppliers:
+    get:
+      summary: Список поставщиков
+      description: Список поставщиков
+      operationId: get_suppliers
+      tags:
+      - Suppliers
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierPage'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - name,asc
+          - name,desc
+          default: name,asc
+        description: Одно значение field,direction. Вторичная сортировка id ASC.
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+    post:
+      summary: Создать поставщика
+      description: Нормализованное имя (trim + регистр без учёта) уникально в компании; это также ключ CSV-импорта.
+      operationId: post_suppliers
+      tags:
+      - Suppliers
+      responses:
+        '201':
+          description: Создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+          headers:
+            Location:
+              description: Относительный URI созданного ресурса /api/v1/...
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierCreate'
+  /suppliers/{supplierId}:
+    get:
+      summary: Карточка поставщика
+      description: Карточка поставщика
+      operationId: get_suppliers_supplierId
+      tags:
+      - Suppliers
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: supplierId
+        in: path
+        required: true
+        schema: *id001
+    patch:
+      summary: Переименовать поставщика
+      description: Переименовать поставщика
+      operationId: patch_suppliers_supplierId
+      tags:
+      - Suppliers
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: supplierId
+        in: path
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierPatch'
+    delete:
+      summary: Удалить поставщика без связей
+      description: 409 RESOURCE_IN_USE, если существуют предложения, выбор preferredSupplierId или любые закупки
+        поставщика.
+      operationId: delete_suppliers_supplierId
+      tags:
+      - Suppliers
+      responses:
+        '204':
+          description: Успешно, тело отсутствует
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: supplierId
+        in: path
+        required: true
+        schema: *id001
+      - name: version
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+  /products/{productId}/suppliers:
+    get:
+      summary: Предложения поставщиков товара
+      description: Сортировка supplierId ASC; выбор поставщика делает пользователь, автоматического выбора самого
+        дешёвого нет.
+      operationId: get_products_productId_suppliers
+      tags:
+      - Suppliers
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferPage'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema: *id001
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+  /suppliers/{supplierId}/products:
+    get:
+      summary: Товары поставщика
+      description: Сортировка productId ASC.
+      operationId: get_suppliers_supplierId_products
+      tags:
+      - Suppliers
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferPage'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: supplierId
+        in: path
+        required: true
+        schema: *id001
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+  /suppliers/{supplierId}/products/{productId}:
+    put:
+      summary: Создать или обновить предложение
+      description: Уникальная пара supplierId+productId. version=0 для новой связи; иначе актуальная версия. Всегда
+        200. Цена применяется только к новым/редактируемым черновикам.
+      operationId: put_suppliers_supplierId_products_productId
+      tags:
+      - Suppliers
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema: *id001
+      - name: supplierId
+        in: path
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfferSet'
+    delete:
+      summary: Удалить предложение
+      description: '409 RESOURCE_IN_USE, если поставщик выбран в preferredSupplierId или предложение используется
+        в DRAFT/CREATED. Исторические ORDERED/RECEIVED/CANCELLED не мешают: они содержат снимки условий.'
+      operationId: delete_suppliers_supplierId_products_productId
+      tags:
+      - Suppliers
+      responses:
+        '204':
+          description: Успешно, тело отсутствует
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema: *id001
+      - name: supplierId
+        in: path
+        required: true
+        schema: *id001
+      - name: version
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+  /analytics/policy:
+    get:
+      summary: Правила расчёта MVP
+      description: Правила расчёта MVP
+      operationId: get_analytics_policy
+      tags:
+      - Analytics
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+  /analytics/recalculations:
+    post:
+      summary: Запустить пересчёт
+      description: Без тела. Возвращает job; при уже выполняющемся расчёте компании возвращает его. Новый снимок
+        строится атомарно для всей компании; автоматический запуск также выполняется после изменений и смены UTC-дня.
+      operationId: post_analytics_recalculations
+      tags:
+      - Analytics
+      responses:
+        '202':
+          description: Задание принято
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalculationJob'
+          headers:
+            Location:
+              description: Относительный URI созданного ресурса /api/v1/...
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Уникальный ключ операции; повторы с тем же телом возвращают исходный результат.
+  /analytics/recalculations/{jobId}:
+    get:
+      summary: Состояние пересчёта
+      description: Состояние пересчёта
+      operationId: get_analytics_recalculations_jobId
+      tags:
+      - Analytics
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalculationJob'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: jobId
+        in: path
+        required: true
+        schema: *id001
+  /recommendations:
+    get:
+      summary: Рекомендации и состояния товаров
+      description: 'По умолчанию recommendedQuantity>0; onlyPurchasable=false возвращает все товары, в т.ч. NORMAL/NO_SALES.
+        status и productId объединяются через AND. Без snapshotId берётся последний снимок; для следующих страниц
+        передавайте его id. Сортировка CRITICAL, NEED_PURCHASE, NORMAL, NO_SALES, затем productId ASC. Пока нет
+        снимка: 409 ANALYTICS_NOT_READY.'
+      operationId: get_recommendations
+      tags:
+      - Analytics
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationPage'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: status
+        in: query
+        required: false
+        schema: &id012
+          type: string
+          enum:
+          - CRITICAL
+          - NEED_PURCHASE
+          - NORMAL
+          - NO_SALES
+      - name: productId
+        in: query
+        required: false
+        schema: *id001
+      - name: onlyPurchasable
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+      - name: snapshotId
+        in: query
+        required: false
+        schema: *id001
+  /recommendations/{recommendationId}:
+    get:
+      summary: Показатели и объяснение рекомендации
+      description: Снимок неизменяем. Актуальность проверяется по snapshotId через список/дашборд; возможность использования
+        окончательно проверяет POST /purchases.
+      operationId: get_recommendations_recommendationId
+      tags:
+      - Analytics
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recommendation'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: recommendationId
+        in: path
+        required: true
+        schema: *id001
+  /dashboard:
+    get:
+      summary: Dashboard
+      description: Последний снимок, из одной ревизии данных. До первого снимка 409 ANALYTICS_NOT_READY. Списки
+        максимум по 10 элементов в порядке приоритета рекомендаций. isStale=true после изменения данных или смены
+        UTC-дня; фронт показывает время расчёта и обновление.
+      operationId: get_dashboard
+      tags:
+      - Analytics
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+  /purchases:
+    get:
+      summary: Список закупок
+      description: Список закупок
+      operationId: get_purchases
+      tags:
+      - Purchases
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchasePage'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - createdAt,desc
+          - createdAt,asc
+          default: createdAt,desc
+        description: Одно значение field,direction. Вторичная сортировка id ASC.
+      - name: status
+        in: query
+        required: false
+        schema: &id015
+          type: string
+          enum:
+          - DRAFT
+          - CREATED
+          - ORDERED
+          - RECEIVED
+          - CANCELLED
+      - name: supplierId
+        in: query
+        required: false
+        schema: *id001
+    post:
+      summary: Создать черновик закупки
+      description: 'Один поставщик, 1–100 уникальных товаров. Цена, сумма, minOrder и deliveryDays берутся сервером
+        из предложений. quantity>=minOrder. recommendationId необязателен; если передан, должен соответствовать
+        товару, выбранному поставщику и последнему актуальному снимку, recommendedQuantity>0. Пользователь может
+        изменить quantity. Устаревшая рекомендация: 409 STALE_RECOMMENDATION. Создаёт DRAFT.'
+      operationId: post_purchases
+      tags:
+      - Purchases
+      responses:
+        '201':
+          description: Создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Purchase'
+          headers:
+            Location:
+              description: Относительный URI созданного ресурса /api/v1/...
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Уникальный ключ операции; повторы с тем же телом возвращают исходный результат.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseCreate'
+  /purchases/{purchaseId}:
+    get:
+      summary: Карточка закупки
+      description: Карточка закупки
+      operationId: get_purchases_purchaseId
+      tags:
+      - Purchases
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Purchase'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: purchaseId
+        in: path
+        required: true
+        schema: *id001
+    put:
+      summary: Заменить состав черновика
+      description: Только DRAFT. Полностью заменяет supplierId и items, повторно фиксирует актуальные условия предложений.
+        Те же проверки, что у создания. price/totalCost клиент не передаёт.
+      operationId: put_purchases_purchaseId
+      tags:
+      - Purchases
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Purchase'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: purchaseId
+        in: path
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseReplace'
+  /purchases/{purchaseId}/status:
+    patch:
+      summary: Изменить статус закупки
+      description: DRAFT→CREATED/CANCELLED; CREATED→ORDERED/CANCELLED; ORDERED→RECEIVED/CANCELLED. RECEIVED/CANCELLED
+        конечные. Переход на текущий статус с актуальной version — 200 без изменения. RECEIVED атомарно увеличивает
+        остатки всех позиций ровно один раз, повышает их version. Проверка version и статуса под блокировкой; повтор
+        со старой version даёт 409, без повторного прихода.
+      operationId: patch_purchases_purchaseId_status
+      tags:
+      - Purchases
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Purchase'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: purchaseId
+        in: path
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseStatusSet'
+  /imports:
+    post:
+      summary: Запустить импорт CSV
+      description: 'multipart/form-data: type + file. UTF-8, до 10 MiB и 10 000 строк данных. Обработка асинхронна,
+        частичный успех по строкам. Структура и семантика CSV заданы в API.md.'
+      operationId: post_imports
+      tags:
+      - Imports
+      responses:
+        '202':
+          description: Задание принято
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportJob'
+          headers:
+            Location:
+              description: Относительный URI созданного ресурса /api/v1/...
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Уникальный ключ операции; повторы с тем же телом возвращают исходный результат.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                type:
+                  type: string
+                  enum:
+                  - PRODUCTS
+                  - INVENTORY
+                  - SALES
+                  - SUPPLIERS
+                file:
+                  type: string
+                  format: binary
+              required:
+              - type
+              - file
+  /imports/{importId}:
+    get:
+      summary: Результат импорта и счётчики
+      description: Результат импорта и счётчики
+      operationId: get_imports_importId
+      tags:
+      - Imports
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportJob'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: importId
+        in: path
+        required: true
+        schema: *id001
+  /imports/{importId}/errors:
+    get:
+      summary: Ошибки импорта по строкам
+      description: Сортировка row ASC, field ASC. Одна ошибка на невалидную строку, первая по порядку столбцов;
+        row=2 для первой строки данных. errorCount — число ошибочных строк. Во время RUNNING список может расти.
+      operationId: get_imports_importId_errors
+      tags:
+      - Imports
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportErrorPage'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+      parameters:
+      - name: importId
+        in: path
+        required: true
+        schema: *id001
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 80
+        message:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        traceId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        details:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              field:
+                type: string
+                minLength: 1
+                maxLength: 200
+              code:
+                type: string
+                minLength: 1
+                maxLength: 80
+              message:
+                type: string
+                minLength: 1
+                maxLength: 500
+            required:
+            - field
+            - code
+            - message
+      required:
+      - code
+      - message
+      - traceId
+      - details
+    Company:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        createdAt: &id003
+          type: string
+          format: date-time
+          example: '2026-10-25T10:00:00Z'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
+      - id
+      - createdAt
+      - name
+    User:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        createdAt: *id003
+        companyId: *id001
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        email:
+          type: string
+          minLength: 1
+          maxLength: 255
+          format: email
+      required:
+      - id
+      - createdAt
+      - companyId
+      - name
+      - email
+    Register:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        email:
+          type: string
+          minLength: 1
+          maxLength: 255
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          description: 8–72 байта UTF-8; не обрезать. minLength/maxLength дополняются серверной проверкой байтов.
+        companyName:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
+      - name
+      - email
+      - password
+      - companyName
+    Login:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          minLength: 1
+          maxLength: 255
+          format: email
+        password:
+          type: string
+          minLength: 1
+          maxLength: 72
+      required:
+      - email
+      - password
+    AuthResult:
+      type: object
+      additionalProperties: false
+      properties:
+        accessToken:
+          type: string
+          minLength: 1
+          maxLength: 4096
+        tokenType:
+          type: string
+          enum:
+          - Bearer
+        expiresIn:
+          type: integer
+          minimum: 1
+          maximum: 3600
+        user:
+          $ref: '#/components/schemas/User'
+        company:
+          $ref: '#/components/schemas/Company'
+      required:
+      - accessToken
+      - tokenType
+      - expiresIn
+      - user
+      - company
+    Profile:
+      type: object
+      additionalProperties: false
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        company:
+          $ref: '#/components/schemas/Company'
+      required:
+      - user
+      - company
+    ProductCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        sku: &id004
+          type: string
+          minLength: 1
+          maxLength: 100
+        name: &id005
+          type: string
+          minLength: 1
+          maxLength: 255
+        category: &id006
+          type: string
+          minLength: 1
+          maxLength: 255
+          nullable: true
+        preferredSupplierId: &id007
+          type: string
+          pattern: ^[1-9][0-9]{0,18}$
+          description: Положительный BIGINT как строка; не более 9223372036854775807.
+          example: '101'
+          nullable: true
+      required:
+      - sku
+      - name
+    ProductPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        sku: *id004
+        name: *id005
+        category: *id006
+        preferredSupplierId: *id007
+        version:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - version
+      minProperties: 2
+    Product:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        createdAt: *id003
+        sku: *id004
+        name: *id005
+        category: *id006
+        preferredSupplierId: *id007
+        companyId: *id001
+        version:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        updatedAt: *id003
+      required:
+      - id
+      - createdAt
+      - sku
+      - name
+      - category
+      - preferredSupplierId
+      - companyId
+      - version
+      - updatedAt
+    InventorySet:
+      type: object
+      additionalProperties: false
+      properties:
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        version:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - quantity
+      - version
+    Inventory:
+      type: object
+      additionalProperties: false
+      properties:
+        productId: *id001
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        version:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        updatedAt: *id003
+      required:
+      - productId
+      - quantity
+      - version
+      - updatedAt
+    SaleSet:
+      type: object
+      additionalProperties: false
+      properties:
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        version:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          description: 0 для новой записи; текущая версия для замены.
+      required:
+      - quantity
+      - version
+    Sale:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        createdAt: *id003
+        productId: *id001
+        saleDate: *id002
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        version:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - id
+      - createdAt
+      - productId
+      - saleDate
+      - quantity
+      - version
+    SalesSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        dateFrom: *id002
+        dateTo: *id002
+        totalQuantity:
+          type: integer
+          format: int64
+          minimum: 0
+        productCount:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - dateFrom
+      - dateTo
+      - totalQuantity
+      - productCount
+    SupplierCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
+      - name
+    SupplierPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        version:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - name
+      - version
+    Supplier:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        createdAt: *id003
+        companyId: *id001
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        version:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - id
+      - createdAt
+      - companyId
+      - name
+      - version
+    OfferSet:
+      type: object
+      additionalProperties: false
+      properties:
+        price: &id008
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,11})\.[0-9]{2}$
+          description: DECIMAL(14,2), RUB. Точка, ровно 2 знака; арифметика BigDecimal.
+          example: '1250.00'
+        deliveryDays: &id009
+          type: integer
+          minimum: 0
+          maximum: 365
+        minOrder: &id010
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        version:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          description: 0 при создании; текущая версия при замене.
+      required:
+      - price
+      - deliveryDays
+      - minOrder
+      - version
+    Offer:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        createdAt: *id003
+        price: *id008
+        deliveryDays: *id009
+        minOrder: *id010
+        supplierId: *id001
+        productId: *id001
+        version:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - id
+      - createdAt
+      - price
+      - deliveryDays
+      - minOrder
+      - supplierId
+      - productId
+      - version
+    Policy:
+      type: object
+      additionalProperties: false
+      properties:
+        salesWindowDays:
+          type: integer
+          enum:
+          - 30
+        safetyDays:
+          type: integer
+          enum:
+          - 7
+        coverageDays:
+          type: integer
+          enum:
+          - 30
+        fallbackDeliveryDays:
+          type: integer
+          enum:
+          - 7
+        currency:
+          type: string
+          enum:
+          - RUB
+        timezone:
+          type: string
+          enum:
+          - UTC
+      required:
+      - salesWindowDays
+      - safetyDays
+      - coverageDays
+      - fallbackDeliveryDays
+      - currency
+      - timezone
+    Snapshot:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        asOfDate: *id002
+        periodFrom: *id002
+        periodTo: *id002
+        calculatedAt: *id003
+        dataRevision:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        isStale:
+          type: boolean
+        policy:
+          $ref: '#/components/schemas/Policy'
+      required:
+      - id
+      - asOfDate
+      - periodFrom
+      - periodTo
+      - calculatedAt
+      - dataRevision
+      - isStale
+      - policy
+    Recommendation:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        snapshotId: *id001
+        productId: *id001
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 100
+        productName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        supplierId:
+          type: string
+          pattern: ^[1-9][0-9]{0,18}$
+          description: Положительный BIGINT как строка; не более 9223372036854775807.
+          example: '101'
+          nullable: true
+        price:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,11})\.[0-9]{2}$
+          description: DECIMAL(14,2), RUB. Точка, ровно 2 знака; арифметика BigDecimal.
+          example: '1250.00'
+          nullable: true
+        deliveryDays:
+          type: integer
+          minimum: 0
+          maximum: 365
+        minOrder:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        currentStock:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        salesQuantity:
+          type: integer
+          format: int64
+          minimum: 0
+        averageDailySales: &id011
+          type: string
+          pattern: ^(0|[1-9][0-9]*)\.[0-9]{4}$
+          example: '2.0000'
+        stockDays:
+          type: string
+          pattern: ^(0|[1-9][0-9]*)\.[0-9]{4}$
+          example: '2.0000'
+          nullable: true
+        reorderPoint: *id011
+        targetStock: *id011
+        incomingQuantity:
+          type: integer
+          format: int64
+          minimum: 0
+        recommendedQuantity:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        estimatedCost:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,11})\.[0-9]{2}$
+          description: DECIMAL(14,2), RUB. Точка, ровно 2 знака; арифметика BigDecimal.
+          example: '1250.00'
+          nullable: true
+        status: *id012
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        warningCodes:
+          type: array
+          items:
+            type: string
+            enum:
+            - SUPPLIER_NOT_SELECTED
+            - NO_SALES
+            - INCOMING_NOT_DATED
+      required:
+      - id
+      - snapshotId
+      - productId
+      - sku
+      - productName
+      - supplierId
+      - price
+      - deliveryDays
+      - minOrder
+      - currentStock
+      - salesQuantity
+      - averageDailySales
+      - stockDays
+      - reorderPoint
+      - targetStock
+      - incomingQuantity
+      - recommendedQuantity
+      - estimatedCost
+      - status
+      - reason
+      - warningCodes
+    RecommendationPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+        page:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        totalPages:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        snapshot:
+          $ref: '#/components/schemas/Snapshot'
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+      - snapshot
+    Dashboard:
+      type: object
+      additionalProperties: false
+      properties:
+        snapshot:
+          $ref: '#/components/schemas/Snapshot'
+        totalProducts:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        criticalProducts:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        productsToPurchase:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        potentialStockouts:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        recommendedBudget: *id008
+        unpricedRecommendations:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        criticalItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+          maxItems: 10
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+          maxItems: 10
+      required:
+      - snapshot
+      - totalProducts
+      - criticalProducts
+      - productsToPurchase
+      - potentialStockouts
+      - recommendedBudget
+      - unpricedRecommendations
+      - criticalItems
+      - recommendations
+    CalculationJob:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        status:
+          type: string
+          enum:
+          - QUEUED
+          - RUNNING
+          - COMPLETED
+          - FAILED
+        snapshotId:
+          type: string
+          pattern: ^[1-9][0-9]{0,18}$
+          description: Положительный BIGINT как строка; не более 9223372036854775807.
+          example: '101'
+          nullable: true
+        error:
+          type: object
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+              minLength: 1
+              maxLength: 80
+            message:
+              type: string
+              minLength: 1
+              maxLength: 1000
+            traceId:
+              type: string
+              minLength: 1
+              maxLength: 100
+            details:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  field:
+                    type: string
+                    minLength: 1
+                    maxLength: 200
+                  code:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  message:
+                    type: string
+                    minLength: 1
+                    maxLength: 500
+                required:
+                - field
+                - code
+                - message
+          required:
+          - code
+          - message
+          - traceId
+          - details
+          nullable: true
+        createdAt: *id003
+        finishedAt:
+          type: string
+          format: date-time
+          example: '2026-10-25T10:00:00Z'
+          nullable: true
+      required:
+      - id
+      - status
+      - snapshotId
+      - error
+      - createdAt
+      - finishedAt
+    PurchaseItemInput:
+      type: object
+      additionalProperties: false
+      properties:
+        productId: *id001
+        quantity: &id013
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        recommendationId: &id014
+          type: string
+          pattern: ^[1-9][0-9]{0,18}$
+          description: Положительный BIGINT как строка; не более 9223372036854775807.
+          example: '101'
+          nullable: true
+      required:
+      - productId
+      - quantity
+    PurchaseCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        supplierId: *id001
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseItemInput'
+          minItems: 1
+          maxItems: 100
+      required:
+      - supplierId
+      - items
+    PurchaseReplace:
+      type: object
+      additionalProperties: false
+      properties:
+        supplierId: *id001
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseItemInput'
+          minItems: 1
+          maxItems: 100
+        version:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - supplierId
+      - items
+      - version
+    PurchaseItem:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        productId: *id001
+        quantity: *id013
+        recommendationId: *id014
+        price: *id008
+        lineTotal: *id008
+        deliveryDays:
+          type: integer
+          minimum: 0
+          maximum: 365
+        minOrder:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+      required:
+      - id
+      - productId
+      - quantity
+      - recommendationId
+      - price
+      - lineTotal
+      - deliveryDays
+      - minOrder
+    Purchase:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        createdAt: *id003
+        companyId: *id001
+        createdByUserId: *id001
+        supplierId: *id001
+        status: *id015
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseItem'
+          minItems: 1
+          maxItems: 100
+        totalCost: *id008
+        currency:
+          type: string
+          enum:
+          - RUB
+        version:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        updatedAt: *id003
+        receivedAt:
+          type: string
+          format: date-time
+          example: '2026-10-25T10:00:00Z'
+          nullable: true
+      required:
+      - id
+      - createdAt
+      - companyId
+      - createdByUserId
+      - supplierId
+      - status
+      - items
+      - totalCost
+      - currency
+      - version
+      - updatedAt
+      - receivedAt
+    PurchaseStatusSet:
+      type: object
+      additionalProperties: false
+      properties:
+        status: *id015
+        version:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - status
+      - version
+    ImportError:
+      type: object
+      additionalProperties: false
+      properties:
+        row:
+          type: integer
+          minimum: 2
+          maximum: 2147483647
+        field:
+          type: string
+          minLength: 1
+          maxLength: 100
+        code:
+          type: string
+          minLength: 1
+          maxLength: 80
+        message:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+      - row
+      - field
+      - code
+      - message
+    ImportJob:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        type:
+          type: string
+          enum:
+          - PRODUCTS
+          - INVENTORY
+          - SALES
+          - SUPPLIERS
+        status:
+          type: string
+          enum:
+          - QUEUED
+          - RUNNING
+          - COMPLETED
+          - COMPLETED_WITH_ERRORS
+          - FAILED
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        totalRows:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        processedRows:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        createdCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        updatedCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        unchangedCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        errorCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        error:
+          type: object
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+              minLength: 1
+              maxLength: 80
+            message:
+              type: string
+              minLength: 1
+              maxLength: 1000
+            traceId:
+              type: string
+              minLength: 1
+              maxLength: 100
+            details:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  field:
+                    type: string
+                    minLength: 1
+                    maxLength: 200
+                  code:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  message:
+                    type: string
+                    minLength: 1
+                    maxLength: 500
+                required:
+                - field
+                - code
+                - message
+          required:
+          - code
+          - message
+          - traceId
+          - details
+          nullable: true
+        createdAt: *id003
+        finishedAt:
+          type: string
+          format: date-time
+          example: '2026-10-25T10:00:00Z'
+          nullable: true
+      required:
+      - id
+      - type
+      - status
+      - fileName
+      - totalRows
+      - processedRows
+      - createdCount
+      - updatedCount
+      - unchangedCount
+      - errorCount
+      - error
+      - createdAt
+      - finishedAt
+    ProductPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        page:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        totalPages:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+    InventoryPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Inventory'
+        page:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        totalPages:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+    SalePage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Sale'
+        page:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        totalPages:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+    SupplierPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Supplier'
+        page:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        totalPages:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+    OfferPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Offer'
+        page:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        totalPages:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+    PurchasePage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Purchase'
+        page:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        totalPages:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+    ImportErrorPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportError'
+        page:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        totalPages:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+  responses:
+    Error400:
+      description: Некорректный JSON, параметр, Content-Type или заголовок
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error401:
+      description: Нет JWT, JWT истёк/отозван, неверные учётные данные
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error403:
+      description: Недостаточно прав на операцию
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error404:
+      description: Ресурс не найден или принадлежит другой компании
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error409:
+      description: Конфликт версии, уникальности, связей, статуса или актуальности
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error413:
+      description: Файл слишком большой
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error415:
+      description: Неподдерживаемый формат тела/файла
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error422:
+      description: Нарушение валидации или бизнес-ограничений
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error429:
+      description: Слишком много попыток входа/регистрации
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+      headers:
+        Retry-After:
+          description: Число секунд до повтора
+          schema:
+            type: integer
+            minimum: 1
+    Error500:
+      description: Внутренняя ошибка
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
